@@ -2,23 +2,46 @@
 #define _VAD_H
 #include <stdio.h>
 
-/* TODO: add the needed states */
-typedef enum {ST_UNDEF=0, ST_SILENCE, ST_VOICE, ST_INIT} VAD_STATE;
+/* TODO: add the needed states EN PRINCIPI JA ESTA*/
+typedef enum
+{
+   ST_UNDEF = 0,
+   ST_SILENCE = 1,
+   ST_VOICE = 2,
+   ST_INIT = 3,
+   ST_MAYBE_SILENCE = 4,
+   ST_MAYBE_VOICE = 5
+} VAD_STATE;
 
 /* Return a string label associated to each state */
 const char *state2str(VAD_STATE st);
 
-/* TODO: add the variables needed to control the VAD 
-   (counts, thresholds, etc.) */
+/* TODO: add the variables needed to control the VAD
+   (counts, thresholds, etc.) EN PRINCIPI EL BASIC JA ESTA*/
 
-typedef struct {
-  VAD_STATE state;
-  float sampling_rate;
-  unsigned int frame_length;
-  float last_feature; /* for debuggin purposes */
+typedef struct
+{
+   VAD_STATE state;
+   float sampling_rate;
+   unsigned int frame_length;
+   float last_feature; /* for debuggin purposes */
+   // added properties below (taken from pdf section 1.2)
+
+   //***SILENCE/VOICE THRESHOLD***
+   float k0; // <-- if threshold is surpassed above -> voice | if its surpassed below -> silence ||| la dic k0 per consistencia amb el pdf
+
+   //***MINIMUM SILENCE/VOICE DURATIONS FOR STATE CHANGE***
+   float min_silence_standby; // <-- minimum amount of seconds to wait b4 considering it as silence
+   float min_voice_standby;   // <-- minimum amount of seconds to wait b4 considering it as voice
+
+   //***NUMBER OF FRAMES TO USE FOR INITIAL NOISE REFERENCE CALCULATION (N_init)***
+   unsigned int N_init;
+
+   //***METHOD OF NOISE REFERENCE CALCULATION***
+   char noise_reference_calculation;
 } VAD_DATA;
 
-/* Call this function before using VAD: 
+/* Call this function before using VAD:
    It should return allocated and initialized values of vad_data
 
    sampling_rate: ... the sampling rate */
@@ -29,7 +52,7 @@ VAD_DATA *vad_open(float sampling_rate);
    many samples have to be provided */
 unsigned int vad_frame_size(VAD_DATA *);
 
-/* Main function. For each 'time', compute the new state 
+/* Main function. For each 'time', compute the new state
    It returns:
     ST_UNDEF   (0) : undefined; it needs more frames to take decission
     ST_SILENCE (1) : silence
