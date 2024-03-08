@@ -14,7 +14,7 @@ const float FRAME_TIME = 10.0F; /* in ms. */
  */
 
 const char *state_str[] = {
-    "UNDEF", "S", "V", "INIT"};
+    "UNDEF", "S", "V", "INIT", "ST_MAYBE_SILENCE", "ST_MAYBE_VOICE"}; // added last 2 states
 
 const char *state2str(VAD_STATE st)
 {
@@ -24,9 +24,9 @@ const char *state2str(VAD_STATE st)
 /* Define a datatype with interesting features */
 typedef struct
 {
-  float zcr;
-  float p;
-  float am;
+  // float zcr;
+  float p; // PREGUNTA: NOMES NECESSITEM POWER NO? NO ENTENC PQ HEM DE FER UN STRUCT AQUI (VENIA PER DEFECTE)
+  // float am;
 } Features;
 
 /*
@@ -51,7 +51,7 @@ Features compute_features(const float *x, int N)
 }
 
 /*
- * TODO: Init the values of vad_data
+ * TODO: Init the values of vad_data EN PRINCIPI JA ESTA
  */
 
 VAD_DATA *vad_open(float rate)
@@ -59,13 +59,28 @@ VAD_DATA *vad_open(float rate)
   VAD_DATA *vad_data = malloc(sizeof(VAD_DATA));
   vad_data->state = ST_INIT;
   vad_data->sampling_rate = rate;
-  vad_data->frame_length = rate * FRAME_TIME * 1e-3;
+  float frame_length = rate * FRAME_TIME * 1e-3;
+  vad_data->frame_length = frame_length;
 
-  /*initialze VAD properties*/
+  /*initialze remaining VAD properties*/
+  vad_data->min_silence_standby = 5; // random value, change as needed
+  vad_data->min_voice_standby = 5;   // random value, change as needed
+  vad_data->N_init = 5;              // random value, change as needed
+  unsigned int buffered_frames = 5;  // random value, change as needed
+
+  // Allocate memory for the array of float arrays
+  vad_data->buffered_frames = (float **)malloc(sizeof(float *) * buffered_frames);
+
+  // Allocate memory for each individual float array (frame_length floats in each float array)
+  for (int i = 0; i < buffered_frames; i++)
+  {
+    vad_data->buffered_frames[i] = (float *)malloc(sizeof(float) * frame_length);
+  }
 
   /*initialize also the type of noise reference calculation method, by passing either of these 3 strings to noise_reference_calculation property of VAD
 
     (1) "Potencia media inicial" (2) "Media de las potencias en dBs" (3) "Valor maximo de la potencia"*/
+  vad_data->noise_reference_calculation = "Valor maximo de la potencia";
   return vad_data;
 }
 

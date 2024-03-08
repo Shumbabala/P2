@@ -31,14 +31,17 @@ typedef struct
    float k0; // <-- if threshold is surpassed above -> voice | if its surpassed below -> silence ||| la dic k0 per consistencia amb el pdf
 
    //***MINIMUM SILENCE/VOICE DURATIONS FOR STATE CHANGE***
-   float min_silence_standby; // <-- minimum amount of seconds to wait b4 considering it as silence
-   float min_voice_standby;   // <-- minimum amount of seconds to wait b4 considering it as voice
+   unsigned int min_silence_standby; // <-- minimum amount of seconds to wait b4 considering it as silence
+   unsigned int min_voice_standby;   // <-- minimum amount of seconds to wait b4 considering it as voice
 
    //***NUMBER OF FRAMES TO USE FOR INITIAL NOISE REFERENCE CALCULATION (N_init)***
    unsigned int N_init;
 
    //***METHOD OF NOISE REFERENCE CALCULATION***
    char noise_reference_calculation;
+
+   //***ARRAY TO STORE UNDECIDED FRAMES UNTIL DECISION IS MADE***
+   float **buffered_frames; // ** means pointer to pointer
 } VAD_DATA;
 
 /* Call this function before using VAD:
