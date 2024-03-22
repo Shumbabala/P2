@@ -90,7 +90,7 @@ unsigned int vad_frame_size(VAD_DATA *vad_data)
  * using a Finite State Automata
  */
 
-VAD_STATE vad(VAD_DATA *vad_data, float *x)
+VAD_STATE vad(VAD_DATA *vad_data, float *x, float alfa1 /*lab*/)
 {
 
   /*
