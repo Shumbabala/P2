@@ -2,22 +2,22 @@
 #define _VAD_H
 #include <stdio.h>
 
-/* TODO: add the needed states EN PRINCIPI JA ESTA*/
+/* TODO: add the needed states DONE*/
 typedef enum
 {
    ST_UNDEF = 0,
    ST_SILENCE = 1,
    ST_VOICE = 2,
-   ST_INIT = 3,
+   ST_MAYBE_VOICE = 3,
    ST_MAYBE_SILENCE = 4,
-   ST_MAYBE_VOICE = 5
+   ST_INIT = 5
 } VAD_STATE;
 
 /* Return a string label associated to each state */
 const char *state2str(VAD_STATE st);
 
 /* TODO: add the variables needed to control the VAD
-   (counts, thresholds, etc.) EN PRINCIPI EL BASIC JA ESTA*/
+   (counts, thresholds, etc.) DONE*/
 
 typedef struct
 {
@@ -27,21 +27,23 @@ typedef struct
    float last_feature; /* for debuggin purposes */
    // added properties below (taken from pdf section 1.2)
 
-   //***SILENCE/VOICE THRESHOLD***
+   //***SILENCE/VOICE POWER THRESHOLD***
    float k0; // <-- if threshold is surpassed above -> voice | if its surpassed below -> silence ||| la dic k0 per consistencia amb el pdf
 
    //***MINIMUM SILENCE/VOICE DURATIONS FOR STATE CHANGE***
-   unsigned int min_silence_standby; // <-- minimum amount of seconds to wait b4 considering it as silence
-   unsigned int min_voice_standby;   // <-- minimum amount of seconds to wait b4 considering it as voice
+   unsigned int silence_standby; // <-- minimum amount of frames to wait b4 considering it as silence
+   unsigned int voice_standby;   // <-- minimum amount of frames to wait b4 considering it as voice
 
    //***NUMBER OF FRAMES TO USE FOR INITIAL NOISE REFERENCE CALCULATION (N_init)***
-   unsigned int N_init;
+   unsigned int initial_standby;
+
+   //***NUMBER OF FRAMES IN WHICH THE VAD HAS BEEN IN A GIVEN STATE***
+   unsigned int frames_so_far;
+
+   //***ADVANCED PROPERTIES (NOISE REFENCE CALCULATION METHODS, THRESHOLD CALCULATIONS, ETC)***
 
    //***METHOD OF NOISE REFERENCE CALCULATION***
-   char noise_reference_calculation;
-
-   //***ARRAY TO STORE UNDECIDED FRAMES UNTIL DECISION IS MADE***
-   float **buffered_frames; // ** means pointer to pointer
+   //char noise_reference_calculation;
 } VAD_DATA;
 
 /* Call this function before using VAD:
@@ -63,7 +65,7 @@ unsigned int vad_frame_size(VAD_DATA *);
 
     x: input frame
        It is assumed the length is frame_length */
-VAD_STATE vad(VAD_DATA *vad_data, float *x, float alpha1 /*lab*/);
+VAD_STATE vad(VAD_DATA *vad_data, float *x/*, float alpha1 /*lab*/);
 
 /* Free memory
    Returns the state of the last (undecided) states. */
