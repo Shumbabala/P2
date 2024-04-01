@@ -5,7 +5,8 @@
 #include "pav_analysis.h"
 #include "vad.h"
 
-const float FRAME_TIME = 10.0F; /* in ms. */
+//const float FRAME_TIME = 10.0F; /* in ms. */
+const float FRAME_TIME = 15.0F; /* in ms. */
 
 /*
  * As the output state is only ST_VOICE, ST_SILENCE, or ST_UNDEF,
@@ -91,12 +92,12 @@ VAD_DATA *vad_open(float rate)
   /*initialze remaining VAD properties*/
 
   // seconds to wait before exiting UNDEF state (change as needed)
-  float silence_standby = 10e-3;
-  float voice_standby = 10e-3;
-  float initial_standby = 200e-3;
+  float silence_standby = 100e-3;
+  float voice_standby = 100e-3;
+  float initial_standby = 48e-3;
 
   /*NOTE: realistically, standby thresholds should be an integer multiple of the frame temporal duration for them
-  to take upon real effect. So if frame temporal duration is 10 ms, standby's should be multiples of 10 (10, 20, 30, ...)*/
+  to take upon real effect. So if frame temporal duration is 10 ms, standby's should be multiples of 10 (10, 48, 48, ...)*/
 
   // seconds to frames conversion
   unsigned int silence_standby_frames = ceil((silence_standby * rate) / frame_length);
@@ -107,6 +108,10 @@ VAD_DATA *vad_open(float rate)
   vad_data->silence_standby = silence_standby_frames;
   vad_data->voice_standby = voice_standby_frames;
   vad_data->initial_standby = initial_standby_frames;
+
+  // frames_so_far initilization
+  vad_data->frames_so_far = 0;
+  vad_data->frames_to_wait = 1;
 
   /*initialize also the type of noise reference calculation method, by passing either of these 3 strings to noise_reference_calculation property of VAD
 
@@ -152,9 +157,9 @@ VAD_STATE vad(VAD_DATA *vad_data, float *x /*, float alfa1 /*lab*/)
   float power_threshold = vad_data->k0;
   unsigned int silence_standby = vad_data->silence_standby;
   unsigned int voice_standby = vad_data->voice_standby;
-  unsigned int frames_so_far = vad_data->frames_so_far;
+  unsigned int frames_to_wait = vad_data->frames_to_wait;
 
-  switch (vad_data->state)
+  /*switch (vad_data->state)
   {
   case ST_INIT:
     vad_data->state = ST_SILENCE;
@@ -172,13 +177,13 @@ VAD_STATE vad(VAD_DATA *vad_data, float *x /*, float alfa1 /*lab*/)
 
   case ST_UNDEF:
     break;
-  }
+  }*/
 
-  /*switch (vad_state)
+  switch (vad_state)
   {
   case ST_INIT:
     // check whether init_standby has been exhausted & switch to SILENCE, otherwise remain in INIT
-    if (frames_so_far < vad_data->initial_standby)
+    if (vad_data->frames_so_far < vad_data->initial_standby)
     { // we still can't exit INIT state
       vad_data->frames_so_far++;
       // here would go the calculations to compute the silence threshold (COMPLETE)
@@ -192,31 +197,70 @@ VAD_STATE vad(VAD_DATA *vad_data, float *x /*, float alfa1 /*lab*/)
     break;
 
   case ST_SILENCE: // we have 2 options: (1) remain in SILENCE (2) transition to MAYBE SILENCE
-    if (f.p > 25 /*arbitrarily set power in dBs (change as required))
-      vad_data->state = ST_MAYBE_SILENCE;
-    vad_data->frames_so_far++;
+    if (f.p <= 48 /*arbitrarily set power in dBs (change as required)*/)
+    {
+      vad_data->state = ST_MAYBE_VOICE;
+      vad_data->frames_so_far++;
+    }
     break;
 
   case ST_VOICE:
-    if (f.p < 25 /*arbitrarily set power in dBs (change as required))
-      vad_data->state = ST_MAYBE_VOICE;
-    vad_data->frames_so_far++;
+    if (f.p > 48 /*arbitrarily set power in dBs (change as required)*/)
+    {
+      vad_data->state = ST_MAYBE_SILENCE;
+      vad_data->frames_so_far++;
+    }
     break;
 
   case ST_MAYBE_VOICE:
-    if (f.p >= 25 && vada_data->frames_so_far)
-
-      break;
-
-  case ST_UNDEF:
+    if (f.p <= 48 && vad_data->frames_so_far < frames_to_wait)
+    {
+      vad_data->frames_so_far++;
+    }
+    else if (f.p <= 48)
+    {
+      vad_data->frames_so_far = 0;
+      vad_data->state = ST_VOICE;
+    }
+    else
+    {
+      vad_data->frames_so_far = 0;
+      vad_data->state = ST_SILENCE;
+    }
     break;
-  }*/
+
+  case ST_MAYBE_SILENCE:
+    if (f.p > 48 && vad_data->frames_so_far < frames_to_wait)
+    {
+      vad_data->frames_so_far++;
+    }
+    else if (f.p > 48)
+    {
+      vad_data->frames_so_far = 0;
+      vad_data->state = ST_SILENCE;
+    }
+    else
+    {
+      vad_data->frames_so_far = 0;
+      vad_data->state = ST_VOICE;
+    }
+    break;
+  }
 
   if (vad_data->state == ST_SILENCE ||
+      vad_data->state == ST_MAYBE_VOICE)
+    return ST_SILENCE;
+  else if (vad_data->state == ST_VOICE ||
+           vad_data->state == ST_MAYBE_SILENCE)
+    return ST_VOICE;
+  else
+    return ST_SILENCE;
+
+  /*if (vad_data->state == ST_SILENCE ||
       vad_data->state == ST_VOICE)
     return vad_data->state;
   else
-    return ST_UNDEF;
+    return ST_UNDEF;*/
 }
 
 void vad_show_state(const VAD_DATA *vad_data, FILE *out)

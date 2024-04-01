@@ -40,10 +40,13 @@ typedef struct
    //***NUMBER OF FRAMES IN WHICH THE VAD HAS BEEN IN A GIVEN STATE***
    unsigned int frames_so_far;
 
+   //***AMOUNNT OF FRAMES TO WAIT BEFORE VOICE/SILENCE CONFIRMATION***
+   unsigned int frames_to_wait;
+
    //***ADVANCED PROPERTIES (NOISE REFENCE CALCULATION METHODS, THRESHOLD CALCULATIONS, ETC)***
 
    //***METHOD OF NOISE REFERENCE CALCULATION***
-   //char noise_reference_calculation;
+   // char noise_reference_calculation;
 } VAD_DATA;
 
 /* Call this function before using VAD:
@@ -65,7 +68,7 @@ unsigned int vad_frame_size(VAD_DATA *);
 
     x: input frame
        It is assumed the length is frame_length */
-VAD_STATE vad(VAD_DATA *vad_data, float *x/*, float alpha1 /*lab*/);
+VAD_STATE vad(VAD_DATA *vad_data, float *x /*, float alpha1 /*lab*/);
 
 /* Free memory
    Returns the state of the last (undecided) states. */
