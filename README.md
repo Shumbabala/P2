@@ -136,31 +136,66 @@ Ejercicios
   continuación, una captura de `wavesurfer` en la que se vea con claridad la señal temporal, el contorno de
   potencia y la tasa de cruces por cero, junto con el etiquetado manual de los segmentos.
 
+![Etiquetado manual con Wavesurfer](img/etiquetado_manual.png)
+
+La tasa de cruces por zero no se puedo graficar con Wavesurfer, así que como alternativa nos montamos un programa
+en Python que nos solventaría para nosotros. El trazado verde es el único trazado que importa en la imágen, que
+precisamente representa la tasa de cruces por zero que se pide, en función de la trama (frame) del señal de audio .wav.
+
+![Gráfica de la tasa de cruces por zero con Python](img/cruces_por_zero_python.png)
 
 - A la vista de la gráfica, indique qué valores considera adecuados para las magnitudes siguientes:
 
 	* Incremento del nivel potencia en dB, respecto al nivel correspondiente al silencio inicial, para
 	  estar seguros de que un segmento de señal se corresponde con voz.
+   
+	Inicialmente, mediante nuestras primeras observaciones, hemos supuesto que el valor de incremento del nivel de
+	potencia en dB adecuado para nuestro sistema es de unos 25 dB, pero como se podrá ver más en adelante, este valor
+	ha sufrido muchos cambios y al final recaímos en uno de 48 dB (que nos permitió conseguir nuestro F_Score de más de
+	97%).
 
 	* Duración mínima razonable de los segmentos de voz y silencio.
 
+	Hemos supuesto una duración mímima razonable de 10 ms.
+
 	* ¿Es capaz de sacar alguna conclusión a partir de la evolución de la tasa de cruces por cero?
 
+	La tasa de cruces por cero realmente hemos podido ver que da información bastante relevante en cuanto a la detección
+	de tramos de silencio o voz. Cuando hay voz, generalmente hablando, los tasa disminuye, y cuando hay silencio ocurre lo
+	contrario. Es una buena medida a incorporar a nuestro VAD, sobretodo de cara a las tareas de ampliación.
 
 ### Desarrollo del detector de actividad vocal
 
 - Complete el código de los ficheros de la práctica para implementar un detector de actividad vocal en
   tiempo real tan exacto como sea posible. Tome como objetivo la maximización de la puntuación-F `TOTAL`.
 
+![97% FSCORE](img/97%_FSCORE.png)
+
 - Inserte una gráfica en la que se vea con claridad la señal temporal, el etiquetado manual y la detección
-  automática conseguida para el fichero grabado al efecto. 
+  automática conseguida para el fichero grabado al efecto.
+
+  ![Gráfica con visualización del etiquetado manual + etiquetado automático con VAD](img/grafica.png)
 
 - Explique, si existen. las discrepancias entre el etiquetado manual y la detección automática.
+
+  Existe un pequeño error de predicción dado a nuestro algoritmo de clasificación pero realmente deberían
+  considerase menospreciables (sin importancia) ya que tampoco es nuestro objetivo llegar a un F_Score del
+  100%, cuyo caso indicaria un claro "over-fitting" de nuestro VAD, cosa que realmente es indeseada.
 
 - Evalúe los resultados sobre la base de datos `db.v4` con el script `vad_evaluation.pl` e inserte a 
   continuación las tasas de sensibilidad (*recall*) y precisión para el conjunto de la base de datos (sólo
   el resumen).
+  
+![Medidas y F_Score con la database de la ETSETB](img/dbv4_evaluation.png)
 
+Como podemos ver, en esta versión preliminar/primitiva pero funcional de nuestro detector, hay bastante margen
+de mejora, ya que en algunos .wav tenemos F_Score relativamente elevados (+80%/+90%) mientras que en otros non tan
+elevados. Esto puede ser fácilmente explicado con el hecho de que nuestro VAD emplea valores de umbrales predefinidos
+(hardcoded) y por lo tanto no es adaptativo, pero esto se solventará en los días a continuación con las tareas de
+ampliación.
+
+Un cosa también a destacar es que no pudimos hacer la evaluación con todos los .wav de la database, ya que como se puede
+observar, el último .wav ha dado algún tipo de error, pero se procurará de solventar a lo largo de los días que siguen.
 
 ### Trabajos de ampliación
 
