@@ -169,7 +169,8 @@ precisamente representa la tasa de cruces por zero que se pide, en función de l
 - Complete el código de los ficheros de la práctica para implementar un detector de actividad vocal en
   tiempo real tan exacto como sea posible. Tome como objetivo la maximización de la puntuación-F `TOTAL`.
 
-![97% FSCORE](img/97%_FSCORE.png)
+![97% FSCORE](img/97%_FSCORE.png) 
+Por algun motivo extraño la captura no se sitúa. Para encontrarla, váyase al directorio img/, la captura es la llamada "97%_FSCORE"
 
 - Inserte una gráfica en la que se vea con claridad la señal temporal, el etiquetado manual y la detección
   automática conseguida para el fichero grabado al efecto.
