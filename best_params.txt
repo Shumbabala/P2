@@ -1,0 +1,10 @@
+best parameters so far (all in vad.c):
+
+const float FRAME_TIME = 15.0F; /* in ms. */
+
+// seconds to wait before exiting UNDEF state (change as needed)
+  float silence_standby = 100e-3;
+  float voice_standby = 100e-3;
+  float initial_standby = 48e-3;
+
+  vad_data->k0 = 48; // arbitrary value optimized experimentally

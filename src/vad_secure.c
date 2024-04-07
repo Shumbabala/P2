@@ -5,8 +5,8 @@
 #include "pav_analysis.h"
 #include "vad.h"
 
-const float FRAME_TIME = 10.0F; /* in ms. */
-// const float FRAME_TIME = 15.0F; /* in ms. */
+// const float FRAME_TIME = 10.0F; /* in ms. */
+const float FRAME_TIME = 15.0F; /* in ms. */
 
 /*
  * As the output state is only ST_VOICE, ST_SILENCE, or ST_UNDEF,
@@ -22,7 +22,7 @@ const char *state2str(VAD_STATE st)
   return state_str[st];
 }
 
-/* TODO: Define a datatype with interesting features */
+/* Define a datatype with interesting features */
 typedef struct // implemented
 {
   float p; // PREGUNTA: NOMES NECESSITEM POWER NO? NO ENTENC PQ HEM DE FER UN STRUCT AQUI (VENIA PER DEFECTE)
@@ -73,7 +73,7 @@ Features compute_features_hamming(const float *x, int N) // implemented
   }
 
   // feat.zcr = feat.p = feat.am = (float) rand()/RAND_MAX;
-  feat.p = fabsf(compute_hamming_power(hamming_window, N, 1, x)); // basic power computation (no hamming)
+  feat.p = abs(compute_hamming_power(hamming_window, N, 1, x)); // basic power computation (no hamming)
   return feat;
 }
 
@@ -81,7 +81,7 @@ Features compute_features_hamming(const float *x, int N) // implemented
  * TODO: Init the values of vad_data EN PRINCIPI JA ESTA
  */
 
-VAD_DATA *vad_open(float rate, float k0)
+VAD_DATA *vad_open(float rate)
 {
   VAD_DATA *vad_data = malloc(sizeof(VAD_DATA));
   vad_data->state = ST_INIT;
@@ -97,7 +97,7 @@ VAD_DATA *vad_open(float rate, float k0)
   float initial_standby = 48e-3;
 
   /*NOTE: realistically, standby thresholds should be an integer multiple of the frame temporal duration for them
-  to take upon real effect. So if frame temporal duration is 10 ms, standby's should be multiples of 10 (10, 20, 30, ...)*/
+  to take upon real effect. So if frame temporal duration is 10 ms, standby's should be multiples of 10 (10, 48, 48, ...)*/
 
   // seconds to frames conversion
   unsigned int silence_standby_frames = ceil((silence_standby * rate) / frame_length);
@@ -161,6 +161,26 @@ VAD_STATE vad(VAD_DATA *vad_data, float *x /*, float alfa1 /*lab*/)
   unsigned int voice_standby = vad_data->voice_standby;
   unsigned int frames_to_wait = vad_data->frames_to_wait;
 
+  /*switch (vad_data->state)
+  {
+  case ST_INIT:
+    vad_data->state = ST_SILENCE;
+    break;
+
+  case ST_SILENCE:
+    if (f.p < 25)
+      vad_data->state = ST_VOICE;
+    break;
+
+  case ST_VOICE:
+    if (f.p > 25)
+      vad_data->state = ST_SILENCE;
+    break;
+
+  case ST_UNDEF:
+    break;
+  }*/
+
   switch (vad_state)
   {
   case ST_INIT:
@@ -179,7 +199,7 @@ VAD_STATE vad(VAD_DATA *vad_data, float *x /*, float alfa1 /*lab*/)
     break;
 
   case ST_SILENCE: // we have 2 options: (1) remain in SILENCE (2) transition to MAYBE SILENCE
-    if (f.p <= power_threshold)
+    if (f.p <= 48 /*arbitrarily set power in dBs (change as required)*/)
     {
       vad_data->state = ST_MAYBE_VOICE;
       vad_data->frames_so_far++;
@@ -187,7 +207,7 @@ VAD_STATE vad(VAD_DATA *vad_data, float *x /*, float alfa1 /*lab*/)
     break;
 
   case ST_VOICE:
-    if (f.p > power_threshold)
+    if (f.p > 48 /*arbitrarily set power in dBs (change as required)*/)
     {
       vad_data->state = ST_MAYBE_SILENCE;
       vad_data->frames_so_far++;
@@ -195,11 +215,11 @@ VAD_STATE vad(VAD_DATA *vad_data, float *x /*, float alfa1 /*lab*/)
     break;
 
   case ST_MAYBE_VOICE:
-    if (f.p <= power_threshold && vad_data->frames_so_far < frames_to_wait)
+    if (f.p <= 48 && vad_data->frames_so_far < frames_to_wait)
     {
       vad_data->frames_so_far++;
     }
-    else if (f.p <= power_threshold)
+    else if (f.p <= 48)
     {
       vad_data->frames_so_far = 0;
       vad_data->state = ST_VOICE;
@@ -212,11 +232,11 @@ VAD_STATE vad(VAD_DATA *vad_data, float *x /*, float alfa1 /*lab*/)
     break;
 
   case ST_MAYBE_SILENCE:
-    if (f.p > power_threshold && vad_data->frames_so_far < frames_to_wait)
+    if (f.p > 48 && vad_data->frames_so_far < frames_to_wait)
     {
       vad_data->frames_so_far++;
     }
-    else if (f.p > power_threshold)
+    else if (f.p > 48)
     {
       vad_data->frames_so_far = 0;
       vad_data->state = ST_SILENCE;
@@ -236,7 +256,13 @@ VAD_STATE vad(VAD_DATA *vad_data, float *x /*, float alfa1 /*lab*/)
            vad_data->state == ST_MAYBE_SILENCE)
     return ST_VOICE;
   else
-    return ST_SILENCE; // intially state == INIT, we supose it to be SILENCE
+    return ST_SILENCE;
+
+  /*if (vad_data->state == ST_SILENCE ||
+      vad_data->state == ST_VOICE)
+    return vad_data->state;
+  else
+    return ST_UNDEF;*/
 }
 
 void vad_show_state(const VAD_DATA *vad_data, FILE *out)
