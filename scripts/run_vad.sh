@@ -1,6 +1,10 @@
 #!/bin/bash
 
-alpha1=${1:-5}
+adaptive=${1:-1}
+IS=${2:-70} #initial standby
+SS=${3:-90} #silence standby
+VS=${4:-10} #voice standby
+M=${5:-2}
 
 # Be sure that this file has execution permissions:
 # Use the nautilus explorer or chmod +x run_vad.sh
@@ -13,7 +17,7 @@ set -o pipefail
 DIR_P2=$HOME/PAV/P2
 DB=$DIR_P2/db.v4
 #CMD="$DIR_P2/bin/vad -1 $alpha1" #-1 6 are lab comments (also added "" to form the string)
-CMD=$DIR_P2/bin/vad
+CMD="$DIR_P2/bin/vad -A $adaptive --initial_standby $IS --silence_standby $SS --voice_standby $VS -M $M"
 
 for filewav in $DB/*/*wav; do
 #    echo

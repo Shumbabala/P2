@@ -27,6 +27,8 @@ int main(int argc, char *argv[])
 
   char *input_wav, *output_vad, *output_wav;
   float cli_k0;
+  int cli_adaptive, cli_initial_standby, cli_voice_standby, cli_silence_standby;
+  char cli_method;
 
   DocoptArgs args = docopt(argc, argv, /* help */ 1, /* version */ "2.0");
 
@@ -38,6 +40,12 @@ int main(int argc, char *argv[])
 
   // cli parameters extraction
   cli_k0 = atof(args.k0);
+  cli_adaptive = atoi(args.adaptive);
+  cli_initial_standby = atoi(args.initial_standby);
+  // printf("IS: %c\nIS after atoi(): %d", args.initial_standby, cli_initial_standby);
+  cli_voice_standby = atoi(args.voice_standby);
+  cli_silence_standby = atoi(args.silence_standby);
+  cli_method = atoi(args.method);
 
   if (input_wav == 0 || output_vad == 0)
   {
@@ -74,7 +82,9 @@ int main(int argc, char *argv[])
       return -1;
     }
   }
-  vad_data = vad_open(sf_info.samplerate, cli_k0);
+  vad_data = vad_open(sf_info.samplerate, cli_k0, cli_adaptive, cli_initial_standby,
+                      cli_silence_standby, cli_voice_standby, cli_method);
+  // printf("rate value: %d\n", sf_info.samplerate);
   /* Allocate memory for buffers */
   frame_size = vad_frame_size(vad_data);
   buffer = (float *)malloc(frame_size * sizeof(float));

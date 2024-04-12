@@ -170,7 +170,6 @@ precisamente representa la tasa de cruces por zero que se pide, en función de l
   tiempo real tan exacto como sea posible. Tome como objetivo la maximización de la puntuación-F `TOTAL`.
 
 ![97% FSCORE](img/97%_FSCORE.png) 
-Por algun motivo extraño la captura no se sitúa. Para encontrarla, váyase al directorio img/, la captura es la llamada "97%_FSCORE"
 
 - Inserte una gráfica en la que se vea con claridad la señal temporal, el etiquetado manual y la detección
   automática conseguida para el fichero grabado al efecto.
@@ -189,15 +188,6 @@ Por algun motivo extraño la captura no se sitúa. Para encontrarla, váyase al 
   
 ![Medidas y F_Score con la database de la ETSETB](img/dbv4_evaluation.png)
 
-Como podemos ver, en esta versión preliminar/primitiva pero funcional de nuestro detector, hay bastante margen
-de mejora, ya que en algunos .wav tenemos F_Score relativamente elevados (+80%/+90%) mientras que en otros non tan
-elevados. Esto puede ser fácilmente explicado con el hecho de que nuestro VAD emplea valores de umbrales predefinidos
-(hardcoded) y por lo tanto no es adaptativo, pero esto se solventará en los días a continuación con las tareas de
-ampliación.
-
-Un cosa también a destacar es que no pudimos hacer la evaluación con todos los .wav de la database, ya que como se puede
-observar, el último .wav ha dado algún tipo de error, pero se procurará de solventar a lo largo de los días que siguen.
-
 ### Trabajos de ampliación
 
 #### Cancelación del ruido en los segmentos de silencio
@@ -206,16 +196,27 @@ observar, el último .wav ha dado algún tipo de error, pero se procurará de so
   la que se vea con claridad la señal antes y después de la cancelación (puede que `wavesurfer` no sea la
   mejor opción para esto, ya que no es capaz de visualizar varias señales al mismo tiempo).
 
+  Señal antes de la cancelación de los silencions por zeros:
+  ![Señal antes de la cancelación de los silencions por zeros](img/señal_prefiltrado.png)
+
+  Señal después de la cancelación de los silencions por zeros:
+  ![Señal después de la cancelación de los silencions por zeros](img/señal_postfiltrado.png)
+
 #### Gestión de las opciones del programa usando `docopt_c`
 
 - Si ha usado `docopt_c` para realizar la gestión de las opciones y argumentos del programa `vad`, inserte
   una captura de pantalla en la que se vea el mensaje de ayuda del programa.
 
+![Sinopsis del programa bin/vad](img/sinopsis_bin_vad.png)
 
 ### Contribuciones adicionales y/o comentarios acerca de la práctica
 
 - Indique a continuación si ha realizado algún tipo de aportación suplementaria (algoritmos de detección o 
   parámetros alternativos, etc.).
+
+	- Se han implementado los 3 métodos de cómputo del umbral de ruido de fondo (con las primeras N_init tramas) y se ha descubierto empíricamente que el mejor método es el de la media geométrica, que nos ha dado estos resultados tan satisfactorios.
+
+	- Se ha dado al usuario la opción de retocar prácticamente todos los parámetros propios de nuestro VAD, es decir, (1) la adaptabilidad/no adaptabilidad del VAD, (2) umbral de detección de voz/silencio, (3) duraciones (esperas mínimas) en maybe_voice/maybe_silence, (4) tiempo de espera para el cómputo del umbral adaptativo (initial_standby) junto con (5) el método para calcular el umbral de voz/silencio adaptativo (media geométrica, ponderación logarítmica, máximo absoluto)
 
 - Si lo desea, puede realizar también algún comentario acerca de la realización de la práctica que
   considere de interés de cara a su evaluación.

@@ -9,7 +9,12 @@ Options:
    -i FILE, --input-wav=FILE   WAVE file for voice activity detection
    -o FILE, --output-vad=FILE  Label file with the result of VAD
    -w FILE, --output-wav=FILE  WAVE file with silences cleared
-   -1 REAL, --k0=REAL  Threshold value for VAD in dB [Default: 48]
+   -1 REAL, --k0=REAL  Threshold value for VAD in dB [default: 48]
+   -A REAL, --adaptive=REAL  Make program behave adaptively [default: 1]
+   -I REAL, --initial_standby=REAL  Time to wait initially for noise lvl computation (if -A == 1 only) (10n) [default: 70]
+   -SS REAL, --silence_standby=REAL  Time to wait b4 considering silence (10n) [default: 90]
+   -VS REAL, --voice_standby=REAL  Time to wait b4 considering voice (10n) [default: 10]
+   -M REAL, --method=REAL  Method to use to compute noise threshold [default: 2]
    -v, --verbose  Show debug information
    -h, --help     Show this screen
    --version      Show the version of the project

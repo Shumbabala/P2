@@ -81,7 +81,8 @@ Features compute_features_hamming(const float *x, int N) // implemented
  * TODO: Init the values of vad_data EN PRINCIPI JA ESTA
  */
 
-VAD_DATA *vad_open(float rate, float k0)
+VAD_DATA *vad_open(float rate, float k0, int adaptive, int initial_standby,
+                   int silence_standby, int voice_standby, int method)
 {
   VAD_DATA *vad_data = malloc(sizeof(VAD_DATA));
   vad_data->state = ST_INIT;
@@ -91,29 +92,40 @@ VAD_DATA *vad_open(float rate, float k0)
 
   /*initialze remaining VAD properties*/
 
-  // seconds to wait before exiting UNDEF state (change as needed)
-  float silence_standby = 100e-3;
-  float voice_standby = 100e-3;
-  float initial_standby = 48e-3;
+  vad_data->method = method;
 
   /*NOTE: realistically, standby thresholds should be an integer multiple of the frame temporal duration for them
   to take upon real effect. So if frame temporal duration is 10 ms, standby's should be multiples of 10 (10, 20, 30, ...)*/
 
+  // conversion to miliseconds
+  float silence_standby_converted = silence_standby * 1e-3;
+  float voice_standby_converted = voice_standby * 1e-3;
+
   // seconds to frames conversion
-  unsigned int silence_standby_frames = ceil((silence_standby * rate) / frame_length);
-  unsigned int voice_standby_frames = ceil((voice_standby * rate) / frame_length);
-  unsigned int initial_standby_frames = ceil((initial_standby * rate / frame_length));
+  unsigned int silence_standby_frames = ceil((silence_standby_converted * rate) / frame_length);
+  unsigned int voice_standby_frames = ceil((voice_standby_converted * rate) / frame_length);
 
   // VAD_DATA properties assignations
   vad_data->silence_standby = silence_standby_frames;
   vad_data->voice_standby = voice_standby_frames;
-  vad_data->initial_standby = initial_standby_frames;
 
   // frames_so_far initilization
   vad_data->frames_so_far = 0;
-  vad_data->frames_to_wait = 1;
 
-  vad_data->k0 = 48; // arbitrary value optimized experimentally
+  if (adaptive != 1)
+  {
+    vad_data->k0 = k0; // arbitrary value optimized experimentally
+    vad_data->adaptive = 0;
+  }
+  else
+  {
+    // conversion to miliseconds
+    float initial_standby_converted = initial_standby * 1e-3;
+    unsigned int initial_standby_frames = ceil((initial_standby_converted * rate / frame_length));
+    vad_data->initial_standby = initial_standby_frames;
+    vad_data->adaptive = 1;
+    vad_data->frames_for_average = (float *)malloc(initial_standby_frames * sizeof(float));
+  }
 
   /*initialize also the type of noise reference calculation method, by passing either of these 3 strings to noise_reference_calculation property of VAD
 
@@ -157,29 +169,83 @@ VAD_STATE vad(VAD_DATA *vad_data, float *x /*, float alfa1 /*lab*/)
   // VAD_DATA properties extraction (for easier handling)
   VAD_STATE vad_state = vad_data->state;
   float power_threshold = vad_data->k0;
+  int adaptive = vad_data->adaptive;
   unsigned int silence_standby = vad_data->silence_standby;
   unsigned int voice_standby = vad_data->voice_standby;
-  unsigned int frames_to_wait = vad_data->frames_to_wait;
+  unsigned int initial_standby = vad_data->initial_standby;
 
   switch (vad_state)
   {
   case ST_INIT:
-    // check whether init_standby has been exhausted & switch to SILENCE, otherwise remain in INIT
-    if (vad_data->frames_so_far < vad_data->initial_standby)
-    { // we still can't exit INIT state
-      vad_data->frames_so_far++;
-      // here would go the calculations to compute the silence threshold (COMPLETE)
+    if (adaptive)
+    { // check whether init_standby has been exhausted & switch to SILENCE, otherwise remain in INIT
+      if (vad_data->frames_so_far < initial_standby)
+      { // we still can't exit INIT state
+        vad_data->frames_so_far++;
+        // here would go the calculations to compute the silence threshold (COMPLETE)
+        // store frame power in vad_data->frames_for_average[i]
+        vad_data->frames_for_average[vad_data->frames_so_far] = f.p;
+      }
+      else
+      {
+        vad_data->state = ST_SILENCE;
+        // reset frames_so_far
+        vad_data->frames_so_far = 0;
+        /* compute vad_data->frames_for_average average and store in k0 threshold
+        & depending on vad_data->method too*/
+
+        // switch between all 3 available methods
+        int method = vad_data->method;
+        if (method == 1)
+        {
+          // implement 10log10((sum(10^(P[dB]/10)))/N_init)
+          double sum = 0;
+          for (int i = 0; i < initial_standby; i++)
+          {
+            sum += pow(10, vad_data->frames_for_average[i] / 10);
+          }
+          // cast because vad_data->k0 is float
+          vad_data->k0 = (float)10 * log10(sum / initial_standby);
+        }
+        else if (method == 2)
+        {
+          float sum = 0;
+          for (int i = 0; i < initial_standby; ++i)
+          {
+            sum += vad_data->frames_for_average[i];
+          }
+          vad_data->k0 = sum / initial_standby;
+        }
+        else
+        {
+          float *frames = vad_data->frames_for_average;
+          // Initialize min_value with the first element of the array
+          float min_value = frames[0];
+
+          // Iterate through the array starting from the second element
+          for (int i = 1; i < initial_standby; i++)
+          {
+            // Update min_value if the current element is smaller
+            if (frames[i] < min_value)
+            {
+              min_value = frames[i];
+            }
+          }
+          // assign value
+          vad_data->k0 = min_value;
+          printf("k0: %f\n", frames[0]);
+        }
+      }
+      break;
     }
     else
     {
+      // no need to be in standby, immediately switch to SILENCE
       vad_data->state = ST_SILENCE;
-      // reset frames_so_far
-      vad_data->frames_so_far = 0;
     }
-    break;
 
-  case ST_SILENCE: // we have 2 options: (1) remain in SILENCE (2) transition to MAYBE SILENCE
-    if (f.p <= power_threshold)
+  case ST_SILENCE:              // we have 2 options: (1) remain in SILENCE (2) transition to MAYBE SILENCE
+    if (f.p <= power_threshold) // add more paramter checks
     {
       vad_data->state = ST_MAYBE_VOICE;
       vad_data->frames_so_far++;
@@ -187,7 +253,7 @@ VAD_STATE vad(VAD_DATA *vad_data, float *x /*, float alfa1 /*lab*/)
     break;
 
   case ST_VOICE:
-    if (f.p > power_threshold)
+    if (f.p > power_threshold) // add more paramter checks
     {
       vad_data->state = ST_MAYBE_SILENCE;
       vad_data->frames_so_far++;
@@ -195,7 +261,7 @@ VAD_STATE vad(VAD_DATA *vad_data, float *x /*, float alfa1 /*lab*/)
     break;
 
   case ST_MAYBE_VOICE:
-    if (f.p <= power_threshold && vad_data->frames_so_far < frames_to_wait)
+    if (f.p <= power_threshold && vad_data->frames_so_far < voice_standby) // add more paramter checks
     {
       vad_data->frames_so_far++;
     }
@@ -212,7 +278,7 @@ VAD_STATE vad(VAD_DATA *vad_data, float *x /*, float alfa1 /*lab*/)
     break;
 
   case ST_MAYBE_SILENCE:
-    if (f.p > power_threshold && vad_data->frames_so_far < frames_to_wait)
+    if (f.p > power_threshold && vad_data->frames_so_far < silence_standby) // add more paramter checks
     {
       vad_data->frames_so_far++;
     }

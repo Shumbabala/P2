@@ -40,20 +40,28 @@ typedef struct
    //***NUMBER OF FRAMES IN WHICH THE VAD HAS BEEN IN A GIVEN STATE***
    unsigned int frames_so_far;
 
-   //***AMOUNNT OF FRAMES TO WAIT BEFORE VOICE/SILENCE CONFIRMATION***
-   unsigned int frames_to_wait;
-
    //***ADVANCED PROPERTIES (NOISE REFENCE CALCULATION METHODS, THRESHOLD CALCULATIONS, ETC)***
 
    //***METHOD OF NOISE REFERENCE CALCULATION***
-   // char noise_reference_calculation;
+   int method;
+   /*--> can only be equal to:
+      (1) "potencia media inicial"
+      (2) "media de las potencias en dBs"
+      (3) "Valor máximo de la potencia"
+      FORMULAS ES PODEN TROBAR A PAG 3-4 PDF P2 PAV*/
+
+   //***NOISE FRAMES TO USE FOR AVERAGING***
+   float *frames_for_average;
+   int adaptive;
+
 } VAD_DATA;
 
 /* Call this function before using VAD:
    It should return allocated and initialized values of vad_data
 
    sampling_rate: ... the sampling rate */
-VAD_DATA *vad_open(float sampling_rate, float k0);
+VAD_DATA *vad_open(float sampling_rate, float k0, int adaptive, int initial_standby,
+                   int silence_standby, int voice_standby, int method);
 
 /* vad works frame by frame.
    This function returns the frame size so that the program knows how

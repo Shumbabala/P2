@@ -4,7 +4,10 @@ __MAC*
 *DS_Store
 *Zone.Identifier
 *bak
+*txt
 
+!/docopt_c/
 !/scripts/
 !/src/
 !/img/
+!/db.v4/

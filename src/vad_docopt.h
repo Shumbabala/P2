@@ -16,10 +16,15 @@ typedef struct {
     int verbose;
     int version;
     /* options with arguments */
+    char *adaptive;
+    char *initial_standby;
     char *input_wav;
     char *k0;
+    char *method;
     char *output_vad;
     char *output_wav;
+    char *silence_standby;
+    char *voice_standby;
     /* special */
     const char *usage_pattern;
     const char *help_message;
@@ -37,7 +42,12 @@ const char help_message[] =
 "   -i FILE, --input-wav=FILE   WAVE file for voice activity detection\n"
 "   -o FILE, --output-vad=FILE  Label file with the result of VAD\n"
 "   -w FILE, --output-wav=FILE  WAVE file with silences cleared\n"
-"   -1 REAL, --k0=REAL  Threshold value for VAD in dB [Default: 48]\n"
+"   -1 REAL, --k0=REAL  Threshold value for VAD in dB [default: 48]\n"
+"   -A REAL, --adaptive=REAL  Make program behave adaptively [default: 1]\n"
+"   -I REAL, --initial_standby=REAL  Time to wait initially for noise lvl computation (if -A == 1 only) (10n) [default: 70]\n"
+"   -SS REAL, --silence_standby=REAL  Time to wait b4 considering silence (10n) [default: 90]\n"
+"   -VS REAL, --voice_standby=REAL  Time to wait b4 considering voice (10n) [default: 10]\n"
+"   -M REAL, --method=REAL  Method to use to compute noise threshold [default: 2]\n"
 "   -v, --verbose  Show debug information\n"
 "   -h, --help     Show this screen\n"
 "   --version      Show the version of the project\n"
@@ -272,18 +282,33 @@ int elems_to_args(Elements *elements, DocoptArgs *args, bool help,
             args->verbose = option->value;
         } else if (!strcmp(option->olong, "--version")) {
             args->version = option->value;
+        } else if (!strcmp(option->olong, "--adaptive")) {
+            if (option->argument)
+                args->adaptive = option->argument;
+        } else if (!strcmp(option->olong, "--initial_standby")) {
+            if (option->argument)
+                args->initial_standby = option->argument;
         } else if (!strcmp(option->olong, "--input-wav")) {
             if (option->argument)
                 args->input_wav = option->argument;
         } else if (!strcmp(option->olong, "--k0")) {
             if (option->argument)
                 args->k0 = option->argument;
+        } else if (!strcmp(option->olong, "--method")) {
+            if (option->argument)
+                args->method = option->argument;
         } else if (!strcmp(option->olong, "--output-vad")) {
             if (option->argument)
                 args->output_vad = option->argument;
         } else if (!strcmp(option->olong, "--output-wav")) {
             if (option->argument)
                 args->output_wav = option->argument;
+        } else if (!strcmp(option->olong, "--silence_standby")) {
+            if (option->argument)
+                args->silence_standby = option->argument;
+        } else if (!strcmp(option->olong, "--voice_standby")) {
+            if (option->argument)
+                args->voice_standby = option->argument;
         }
     }
     /* commands */
@@ -304,7 +329,8 @@ int elems_to_args(Elements *elements, DocoptArgs *args, bool help,
 
 DocoptArgs docopt(int argc, char *argv[], bool help, const char *version) {
     DocoptArgs args = {
-        0, 0, 0, NULL, (char*) "48", NULL, NULL,
+        0, 0, 0, (char*) "1", (char*) "70", NULL, (char*) "48", (char*) "2",
+        NULL, NULL, (char*) "90", (char*) "10",
         usage_pattern, help_message
     };
     Tokens ts;
@@ -316,12 +342,17 @@ DocoptArgs docopt(int argc, char *argv[], bool help, const char *version) {
         {"-h", "--help", 0, 0, NULL},
         {"-v", "--verbose", 0, 0, NULL},
         {NULL, "--version", 0, 0, NULL},
+        {"-A", "--adaptive", 1, 0, NULL},
+        {"-I", "--initial_standby", 1, 0, NULL},
         {"-i", "--input-wav", 1, 0, NULL},
         {"-1", "--k0", 1, 0, NULL},
+        {"-M", "--method", 1, 0, NULL},
         {"-o", "--output-vad", 1, 0, NULL},
-        {"-w", "--output-wav", 1, 0, NULL}
+        {"-w", "--output-wav", 1, 0, NULL},
+        {"-SS", "--silence_standby", 1, 0, NULL},
+        {"-VS", "--voice_standby", 1, 0, NULL}
     };
-    Elements elements = {0, 0, 7, commands, arguments, options};
+    Elements elements = {0, 0, 12, commands, arguments, options};
 
     ts = tokens_new(argc, argv);
     if (parse_args(&ts, &elements))
